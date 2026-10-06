@@ -22,7 +22,8 @@
       <div class="status"><span class="dot loading" id="dot"></span><span id="statusText">Cargando…</span><span id="timer"></span></div>
       <div class="hero">
         <button id="recBtn" class="rec" disabled aria-label="Grabar"><span class="ring"></span><span class="icon"></span></button>
-        <p class="hint">Ctrl+Shift+R también inicia o detiene</p>
+        <button id="pauseBtn" class="pause" hidden>⏸ Pausar</button>
+        <p class="hint" id="hint">Se transcribe al detener</p>
       </div>
       <div class="waves">
         <div class="wave"><label>Tú</label><canvas id="waveMic"></canvas></div>

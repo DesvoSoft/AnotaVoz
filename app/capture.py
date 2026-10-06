@@ -12,6 +12,7 @@ instead of touching the wave file from inside the callback: PortAudio
 callbacks are expected to return quickly, and file I/O has no such
 guarantee.
 """
+import os
 import queue
 import threading
 import time
@@ -87,8 +88,15 @@ class StreamRecorder:
         self._writer_thread = None
         self._stop_writer = threading.Event()
         self.started_at = None
+        self.paused = False
 
     def _callback(self, in_data, frame_count, time_info, status):
+        # Paused frames are dropped, not buffered: the stream stays open so
+        # resuming is instant and both tracks skip the same stretch of time.
+        if self.paused:
+            if self._on_level:
+                self._on_level(0.0)
+            return (None, pyaudio.paContinue)
         self._queue.put(in_data)
         if self._on_level:
             self._on_level(rms_level(in_data))
@@ -148,49 +156,74 @@ class StreamRecorder:
 
 
 class CaptureSession:
-    """Owns the mic + system-loopback recorders for one recording."""
+    """Owns the mic + system-loopback recorders for one recording.
+
+    Either track may be unavailable (no microphone plugged in, mic access
+    blocked by policy, no output device): the other one is still recorded and
+    the reason lands in `skipped`. Only having neither is an error."""
 
     def __init__(self, mic_path, system_path, level_cb=None):
         self._level_cb = level_cb
         self.mic_path = mic_path
         self.system_path = system_path
+        self.skipped = {}  # "microphone" / "system" -> why it is not being recorded
         self._pa = None
         self._mic_rec = None
         self._sys_rec = None
         self._keep_alive = None
 
+    def _open_recorder(self, kind, find_device, path):
+        """The opened recorder for one track, or None with the reason noted."""
+        cb = self._level_cb
+        rec = None
+        try:
+            rec = StreamRecorder(self._pa, find_device(self._pa), path,
+                                 on_level=(lambda v: cb(kind, v)) if cb else None)
+            rec.open()
+            return rec
+        except Exception as e:
+            self.skipped[kind] = str(e)
+            if rec is not None:
+                rec.stop()  # closes the WAV that open() created before failing
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+            return None
+
     def start(self):
         self._pa = pyaudio.PyAudio()
-        try:
-            mic_device = default_mic(self._pa)
-            loopback_device = default_loopback(self._pa)
-            output_device = default_output(self._pa)
-        except Exception:
-            self._pa.terminate()
-            self._pa = None
-            raise
-
-        self._keep_alive = _KeepAliveOutput(self._pa, output_device)
-        cb = self._level_cb
-        self._mic_rec = StreamRecorder(self._pa, mic_device, self.mic_path,
-                                       on_level=(lambda v: cb("microphone", v)) if cb else None)
-        self._sys_rec = StreamRecorder(self._pa, loopback_device, self.system_path,
-                                       on_level=(lambda v: cb("system", v)) if cb else None)
+        self.skipped = {}
 
         # open() allocates the PortAudio stream but doesn't start callbacks;
         # doing both opens before either start() keeps the gap between the
-        # two streams' first callback to a couple of Python statements. The
-        # keep-alive starts first so the render endpoint is already awake
-        # before loopback capture begins.
+        # two streams' first callback to a couple of Python statements.
+        self._mic_rec = self._open_recorder("microphone", default_mic, self.mic_path)
+        self._sys_rec = self._open_recorder("system", default_loopback, self.system_path)
+        if self._mic_rec is None and self._sys_rec is None:
+            self._pa.terminate()
+            self._pa = None
+            raise CaptureError("No microphone and no system audio to record — "
+                               + "; ".join(f"{k}: {v}" for k, v in self.skipped.items()))
+
         try:
-            self._mic_rec.open()
-            self._sys_rec.open()
-            self._keep_alive.start()
-            self._mic_rec.start()
-            self._sys_rec.start()
+            # The keep-alive starts first so the render endpoint is already
+            # awake before loopback capture begins.
+            if self._sys_rec is not None:
+                self._keep_alive = _KeepAliveOutput(self._pa, default_output(self._pa))
+                self._keep_alive.start()
+            for rec in (self._mic_rec, self._sys_rec):
+                if rec is not None:
+                    rec.start()
         except Exception:
             self.stop()
             raise
+
+    def set_paused(self, paused):
+        """Both tracks flip together so they stay aligned across the gap."""
+        for rec in (self._mic_rec, self._sys_rec):
+            if rec is not None:
+                rec.paused = paused
 
     def stop(self):
         for part in (self._mic_rec, self._sys_rec, self._keep_alive):
@@ -202,4 +235,6 @@ class CaptureSession:
         if self._pa is not None:
             self._pa.terminate()
             self._pa = None
-        return self.mic_path, self.system_path
+        # None for a track that was never recorded: there is no file to read.
+        return (self.mic_path if self._mic_rec is not None else None,
+                self.system_path if self._sys_rec is not None else None)

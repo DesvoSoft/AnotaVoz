@@ -8,13 +8,14 @@ import pystray
 from PIL import Image, ImageDraw
 
 from app import single_instance
-from app.controller import IDLE, LOADING, RECORDING, TRANSCRIBING, RecordingController
+from app.controller import IDLE, LOADING, PAUSED, RECORDING, TRANSCRIBING, RecordingController
 from app.transcriber import MODELS
 
 STATE_COLORS = {
     LOADING: (200, 180, 0, 255),
     IDLE: (50, 170, 80, 255),
     RECORDING: (220, 40, 40, 255),
+    PAUSED: (140, 140, 150, 255),
     TRANSCRIBING: (230, 150, 20, 255),
 }
 
@@ -22,6 +23,7 @@ STATE_LABELS = {
     LOADING: "EchoNote — loading model...",
     IDLE: "EchoNote — ready",
     RECORDING: "EchoNote — recording",
+    PAUSED: "EchoNote — paused",
     TRANSCRIBING: "EchoNote — transcribing...",
 }
 
@@ -45,6 +47,8 @@ class TrayApp:
             title=STATE_LABELS[LOADING],
             menu=pystray.Menu(
                 pystray.MenuItem("Start/stop recording", self._on_toggle),
+                pystray.MenuItem("Pause/resume", self._on_pause,
+                                 enabled=lambda item: self.controller.state in (RECORDING, PAUSED)),
                 pystray.MenuItem("Model", pystray.Menu(*self._model_menu_items())),
                 pystray.MenuItem("Quit", self._on_quit),
             ),
@@ -84,6 +88,9 @@ class TrayApp:
 
     def _on_toggle(self, icon, item):
         self.controller.toggle()
+
+    def _on_pause(self, icon, item):
+        self.controller.pause()
 
     def _on_quit(self, icon, item):
         # Ordered shutdown, unlike the prototype's os._exit(0): release the

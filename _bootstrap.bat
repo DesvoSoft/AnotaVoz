@@ -1,6 +1,7 @@
 @echo off
-rem Shared first-run setup for the run*.bat launchers: Python check, .venv,
-rem dependencies and the pinned whisper binaries (tools\setup_binaries.py).
+rem Shared first-run setup for the run*.bat launchers: Python check, .venv and
+rem dependencies - the minimum needed to open the app. The app itself then
+rem downloads the engine and the model, showing progress in its own window.
 cd /d "%~dp0"
 
 set "PY=python"
@@ -12,7 +13,8 @@ if errorlevel 1 (
 )
 
 if not exist ".venv\.deps-ok" (
-    echo Setting up EchoNote for the first time, this only happens once...
+    echo Preparing EchoNote for the first time - about a minute, only once.
+    echo The app opens by itself when this finishes.
     if not exist ".venv\Scripts\python.exe" %PY% -m venv .venv
     if errorlevel 1 exit /b 1
     ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -r requirements.txt
@@ -20,9 +22,4 @@ if not exist ".venv\.deps-ok" (
     echo ok> ".venv\.deps-ok"
 )
 
-if not exist "core\whisper\whisper-cli.exe" (
-    echo Fetching the transcription engine...
-    ".venv\Scripts\python.exe" tools\setup_binaries.py
-    if errorlevel 1 exit /b 1
-)
 exit /b 0

@@ -1,6 +1,6 @@
 """Fetch the pinned whisper.cpp binaries into core/whisper/ and check them
-against core/whisper/MANIFEST.json. The binaries are too big for the repo, so a
-fresh clone runs this once (the run*.bat launchers do it on their own).
+against core/whisper/MANIFEST.json. The binaries are too big for the repo; the
+app runs ensure_whisper() by itself on a first start, this is the manual way.
 
     python tools/setup_binaries.py                 # CPU only: the light default
     python tools/setup_binaries.py --gpu           # plus the Vulkan GPU backend
@@ -100,13 +100,29 @@ def install(zip_path, patterns, manifest, dest_dir=WHISPER_DIR):
     return names
 
 
-def _obtain(local_zip, url, label, tmp_dir):
+def _obtain(local_zip, url, label, tmp_dir, progress_cb):
     if local_zip:
         return local_zip
     path = os.path.join(tmp_dir, os.path.basename(url))
-    binaries._fetch(url, path, progress_cb=_progress, label=label)
-    print()
+    binaries._fetch(url, path, progress_cb=progress_cb, label=label)
     return path
+
+
+def ensure_whisper(gpu=False, whisper_zip=None, vulkan_zip=None, progress_cb=None):
+    """Make core/whisper/ hold the pinned binaries, fetching only what is
+    missing or modified. Also what the app calls on a first run, so the
+    download shows up in the UI. Raises SetupError (or OSError) on failure."""
+    manifest = load_manifest()
+    with tempfile.TemporaryDirectory() as tmp:
+        if whisper_zip or mismatches(WHISPER_DIR, manifest, wanted_files(manifest, gpu=False)):
+            zip_path = _obtain(whisper_zip, WHISPER_ZIP_URL, "whisper.cpp", tmp, progress_cb)
+            install(zip_path, WHISPER_PATTERNS, manifest)
+        if gpu and (vulkan_zip or mismatches(WHISPER_DIR, manifest, [VULKAN_FILE])):
+            zip_path = _obtain(vulkan_zip, VULKAN_ZIP_URL, "Vulkan backend", tmp, progress_cb)
+            install(zip_path, (VULKAN_FILE,), manifest)
+    bad = mismatches(WHISPER_DIR, manifest, wanted_files(manifest, gpu))
+    if bad:
+        raise SetupError("Still missing or modified after install: " + ", ".join(bad))
 
 
 def _progress(msg):
@@ -122,23 +138,11 @@ def main(argv=None):
     args = ap.parse_args(argv)
     gpu = args.gpu or bool(args.vulkan_zip)
 
-    manifest = load_manifest()
     try:
-        with tempfile.TemporaryDirectory() as tmp:
-            cpu_names = wanted_files(manifest, gpu=False)
-            if args.whisper_zip or mismatches(WHISPER_DIR, manifest, cpu_names):
-                zip_path = _obtain(args.whisper_zip, WHISPER_ZIP_URL, "whisper.cpp", tmp)
-                install(zip_path, WHISPER_PATTERNS, manifest)
-            if gpu and (args.vulkan_zip or mismatches(WHISPER_DIR, manifest, [VULKAN_FILE])):
-                zip_path = _obtain(args.vulkan_zip, VULKAN_ZIP_URL, "Vulkan backend", tmp)
-                install(zip_path, (VULKAN_FILE,), manifest)
-        bad = mismatches(WHISPER_DIR, manifest, wanted_files(manifest, gpu))
-        if bad:
-            raise SetupError("Still missing or modified after install: " + ", ".join(bad))
-        print(f"whisper.cpp ready in {WHISPER_DIR} ({'CPU + Vulkan' if gpu else 'CPU'})")
-
+        ensure_whisper(gpu, args.whisper_zip, args.vulkan_zip, _progress)
+        print(f"\nwhisper.cpp ready in {WHISPER_DIR} ({'CPU + Vulkan' if gpu else 'CPU'})")
         if not args.skip_ffmpeg:
-            print(f"ffmpeg ready: {binaries.ensure_ffmpeg(_progress)}")
+            print(f"\nffmpeg ready: {binaries.ensure_ffmpeg(_progress)}")
     except (SetupError, OSError, zipfile.BadZipFile) as e:
         print(f"\nSetup failed: {e}", file=sys.stderr)
         return 1

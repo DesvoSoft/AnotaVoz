@@ -12,7 +12,7 @@ from app import config as config_store
 from app.session import MODEL_DIR, RecordingSession
 from app.transcriber import MODELS, Transcriber
 
-LOADING, IDLE, RECORDING, TRANSCRIBING = "loading", "idle", "recording", "transcribing"
+LOADING, IDLE, RECORDING, PAUSED, TRANSCRIBING = "loading", "idle", "recording", "paused", "transcribing"
 
 # Light by default (ADR-014): a new install has to work on a laptop with no
 # GPU and without a 1.6GB first-run download. 'small' is the lightest model
@@ -27,6 +27,7 @@ class RecordingController:
                  on_state=None, on_log=None, choose_model=None,
                  on_level=None, on_progress=None):
         self.hotkey = hotkey or config_store.get_settings()["hotkey"]
+        self.pause_hotkey = config_store.get_settings()["pause_hotkey"]
         self.on_level = on_level or (lambda kind, value: None)
         self.on_progress = on_progress or (lambda pct: None)
         self.on_state = on_state or (lambda state: None)
@@ -95,9 +96,33 @@ class RecordingController:
         self._state = state
         self.on_state(state)
 
+    def _first_run_setup(self):
+        """Fetch whatever a fresh clone still lacks — engine, ffmpeg, model —
+        from inside the app, so the front-end is already on screen showing
+        each step instead of the user staring at nothing while it downloads.
+        Every step is a no-op once its files are there."""
+        def say(msg):
+            self.on_log(f"Primer arranque · {msg}")
+
+        if not binaries.get_whisper_cli():
+            from tools.setup_binaries import ensure_whisper  # only a first run needs it
+            say("Descargando motor de transcripción...")
+            ensure_whisper(progress_cb=say)
+        binaries.ensure_ffmpeg(say)
+
+        if not self.has_model(self.model_name):
+            size_mb, last = MODELS[self.model_name][2], [-1]
+
+            def pct(p):  # one message per percent, not one per megabyte read
+                if int(p) != last[0]:
+                    last[0] = int(p)
+                    say(f"Descargando modelo {self.model_name} ({size_mb} MB)... {int(p)}%")
+            self._ensure_model(self.model_name, pct)
+
     def _prewarm_model(self):
         """Resolves which model to use (asking once if nothing is
-        configured yet) and downloads it before the hotkey is usable: a
+        configured yet) and gets engine + model in place before the hotkey is
+        usable: a
         hotkey fired mid-download would otherwise race the same download
         started again inside RecordingSession.stop_and_transcribe(). Always
         ends in IDLE so a failure here never leaves the app stuck loading."""
@@ -106,14 +131,10 @@ class RecordingController:
                 self.model_name = self._choose_model(MODELS) if self._choose_model else FALLBACK_MODEL
                 config_store.set_model(self.model_name)
 
-            if not binaries.get_whisper_cli():
-                self.on_log("whisper-cli.exe not found under core/whisper/ — "
-                            "transcription will fail until it's restored.")
-                return
-            self._ensure_model(self.model_name)
+            self._first_run_setup()
             self.on_log(f"Ready. Press {self.hotkey} to start/stop recording.")
         except Exception as e:
-            self.on_log(f"Could not prepare model '{self.model_name}': {e}")
+            self.on_log(f"Could not finish setup: {e}")
         finally:
             with self._lock:
                 self._set_state(IDLE)
@@ -151,15 +172,34 @@ class RecordingController:
                     self._session = None
                     return
                 self._set_state(RECORDING)
-                self.on_log("Recording... press the hotkey again to stop.")
+                self.on_log(" ".join(self._session.warnings)
+                            or "Recording... press the hotkey again to stop.")
                 return
-            # state == RECORDING
+            # state == RECORDING or PAUSED
             self._set_state(TRANSCRIBING)
         threading.Thread(target=self._stop_and_transcribe, daemon=True).start()
+
+    def pause(self):
+        """Pause or resume the recording in progress. Nothing is transcribed
+        here — that only happens when toggle() stops the recording for good."""
+        with self._lock:
+            if self._state == RECORDING:
+                self._session.pause()
+                self._set_state(PAUSED)
+                self.on_log("Paused. Resume to keep recording, or stop to transcribe.")
+            elif self._state == PAUSED:
+                self._session.resume()
+                self._set_state(RECORDING)
+                self.on_log("Recording...")
 
     def start(self):
         """Registers the global hotkey and kicks off model prewarm. Non-blocking."""
         keyboard.add_hotkey(self.hotkey, self.toggle)
+        if self.pause_hotkey:
+            try:
+                keyboard.add_hotkey(self.pause_hotkey, self.pause)
+            except ValueError as e:  # a typo in config.json must not block recording
+                self.on_log(f"Pause hotkey '{self.pause_hotkey}' ignored: {e}")
         threading.Thread(target=self._prewarm_model, daemon=True).start()
 
     def shutdown(self):

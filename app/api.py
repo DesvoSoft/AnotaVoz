@@ -71,7 +71,7 @@ class Api:
         if state in ("idle", "loading"):
             return True
         self._close_when_idle = True
-        if state == "recording":
+        if state in ("recording", "paused"):
             self._controller.toggle()
         self._emit("log", "Finalizando antes de cerrar...")
         return False
@@ -127,6 +127,9 @@ class Api:
 
     def toggle(self):
         self._controller.toggle()
+
+    def pause(self):
+        self._controller.pause()
 
     def set_model(self, name):
         self._controller.set_model(name)

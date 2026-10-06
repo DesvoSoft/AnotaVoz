@@ -121,3 +121,14 @@ def test_async_emitter_never_blocks_caller():
 def test_open_folder_rejects_bad_ids():
     api, _ = make()
     assert api.open_folder("..")["error"]
+
+
+def test_pause_is_forwarded_and_closing_while_paused_finishes_first():
+    api, _ = make()
+    c = api._controller
+    c.paused = 0
+    c.pause = lambda: setattr(c, "paused", c.paused + 1)
+    api.pause()
+    assert c.paused == 1
+    c.state = "paused"
+    assert api._request_close() is False and c.toggled == 1

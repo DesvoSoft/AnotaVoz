@@ -10,6 +10,7 @@ DEFAULTS = {
     "vocabulary": "",
     "theme": "system",
     "hotkey": "ctrl+shift+r",
+    "pause_hotkey": "ctrl+shift+space",  # "" turns it off
     "mic_device": None,
     "loopback_device": None,
 }

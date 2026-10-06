@@ -2,9 +2,9 @@ import { api } from './bridge.js';
 import { Waveform } from './waveform.js';
 
 const $ = s => document.querySelector(s);
-const STATE = { loading: 'Cargando modelo…', idle: 'Listo', recording: 'Grabando', transcribing: 'Transcribiendo…' };
+const STATE = { loading: 'Preparando…', idle: 'Listo', recording: 'Grabando', paused: 'En pausa', transcribing: 'Transcribiendo…' };
 const WEAK = ['tiny', 'base', 'small'];
-let A, startedAt = null, current = null, models = [], selected = '', hasGpu = false;
+let A, state = 'loading', startedAt = null, elapsed = 0, current = null, models = [], selected = '', hasGpu = false;
 
 const mic = new Waveform($('#waveMic'), '--yo');
 const sys = new Waveform($('#waveSys'), '--otros');
@@ -13,22 +13,33 @@ const pad = n => String(n).padStart(2, '0');
 const fmt = s => `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s % 3600 / 60))}:${pad(s % 60)}`;
 const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const speaker = s => (s === 'YO' ? 'Tú' : 'Otros');
+const KEYS = { ctrl: 'Ctrl', shift: 'Shift', alt: 'Alt', space: 'Espacio', windows: 'Win' };
+const keys = h => h.split('+').map(k => KEYS[k.trim()] || k.trim().toUpperCase()).join('+');
 
 function setState(s) {
+  const changed = s !== state;
+  state = s;
   $('#statusText').textContent = STATE[s] || s;
   $('#dot').className = 'dot ' + s;
   const btn = $('#recBtn');
   btn.disabled = s === 'loading' || s === 'transcribing';
-  btn.classList.toggle('recording', s === 'recording');
-  $('#progress').hidden = s !== 'transcribing';
+  const live = s === 'recording' || s === 'paused';
+  btn.classList.toggle('recording', live);
+  btn.classList.toggle('paused', s === 'paused');
+  $('#pauseBtn').hidden = !live;
+  $('#pauseBtn').textContent = s === 'paused' ? '▶ Reanudar' : '⏸ Pausar';
+  // Re-announcing the same state (bootstrap vs. an early event) must not hide a first-run bar.
+  if (changed) $('#progress').hidden = s !== 'transcribing';
+  // The timer counts recorded time only: a pause banks what ran so far.
+  if (startedAt) { elapsed += Date.now() - startedAt; startedAt = null; }
   if (s === 'recording') { startedAt = Date.now(); mic.start(); sys.start(); }
-  else { startedAt = null; $('#timer').textContent = ''; mic.stop(); sys.stop(); }
+  else if (s !== 'paused') { elapsed = 0; $('#timer').textContent = ''; mic.stop(); sys.stop(); }
   if (s === 'transcribing') $('#progressBar').style.width = '0%';
 }
 
 setInterval(() => {
   if (!startedAt) return;
-  const s = Math.floor((Date.now() - startedAt) / 1000);
+  const s = Math.floor((elapsed + Date.now() - startedAt) / 1000);
   $('#timer').textContent = `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
 }, 500);
 
@@ -105,7 +116,12 @@ $('#upgradeBtn').onclick = async () => {
 };
 
 window.echo.on('state', setState);
-window.echo.on('log', m => { $('#log').textContent = m; });
+window.echo.on('log', m => {
+  $('#log').textContent = m;
+  // First-run downloads report "… 42%" while loading: show them on the bar.
+  const pct = state === 'loading' && /(\d+)%/.exec(m);
+  if (pct) { $('#progress').hidden = false; $('#progressBar').style.width = pct[1] + '%'; }
+});
 window.echo.on('levels', l => { mic.push(l.microphone); sys.push(l.system); });
 window.echo.on('progress', p => { $('#progressBar').style.width = p + '%'; });
 window.echo.on('history_changed', () => { if ($('#view-history').classList.contains('active')) loadHistory(); });
@@ -120,6 +136,7 @@ window.echo.on('model_download', async e => {
 });
 
 $('#recBtn').onclick = () => A.toggle();
+$('#pauseBtn').onclick = () => A.pause();
 $('#theme').onchange = e => { document.documentElement.dataset.theme = e.target.value; A.set_settings({ theme: e.target.value }); };
 $('#vocab').onchange = e => A.set_settings({ vocabulary: e.target.value });
 
@@ -129,6 +146,9 @@ $('#vocab').onchange = e => A.set_settings({ vocabulary: e.target.value });
   models = b.models; selected = b.model; hasGpu = !!b.gpu;
   $('#gpuChip').textContent = b.gpu ? `⚡ ${b.gpu}` : 'CPU · modo ligero';
   $('#vocab').value = b.settings.vocabulary || '';
+  $('#hint').textContent = [`${keys(b.settings.hotkey)} inicia o detiene`,
+    b.settings.pause_hotkey && `${keys(b.settings.pause_hotkey)} pausa o reanuda`,
+    'se transcribe al detener'].filter(Boolean).join(' · ');
   $('#theme').value = b.settings.theme || 'system';
   document.documentElement.dataset.theme = b.settings.theme || 'system';
   setState(b.state);

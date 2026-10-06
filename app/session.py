@@ -43,6 +43,12 @@ SILENCE_PEAK = 80
 NO_SPEECH_THOLD = 0.4
 
 
+_SKIPPED_MSG = {
+    "microphone": "Sin micrófono ({reason}): se graba solo el audio del sistema.",
+    "system": "Sin audio del sistema ({reason}): se graba solo el micrófono.",
+}
+
+
 class SessionError(Exception):
     pass
 
@@ -117,6 +123,9 @@ class RecordingSession:
         self._capture = None
         self._dir = None
         self._started = None
+        self._paused_at = None
+        self._paused_total = 0.0
+        self.warnings = []  # what start_recording() could not record, for the UI
 
     def start_recording(self):
         self._dir = _session_dir()
@@ -131,9 +140,29 @@ class RecordingSession:
             shutil.rmtree(self._dir, ignore_errors=True)
             raise
         self._started = time.time()
+        self.warnings = [_SKIPPED_MSG[kind].format(reason=reason)
+                         for kind, reason in self._capture.skipped.items()]
+
+    def pause(self):
+        """Stop writing audio without ending the recording. Nothing is
+        transcribed until stop_and_transcribe(); the paused stretch simply
+        is not in the WAVs, so transcript timestamps count recorded time."""
+        if self._capture is None or self._paused_at is not None:
+            return
+        self._capture.set_paused(True)
+        self._paused_at = time.time()
+
+    def resume(self):
+        if self._capture is None or self._paused_at is None:
+            return
+        self._paused_total += time.time() - self._paused_at
+        self._paused_at = None
+        self._capture.set_paused(False)
 
     def _transcribe_track(self, engine, ffmpeg_path, wav_path, model_path, label, idx,
                           vad_model_path, use_gpu, gpu_index):
+        if not wav_path:  # track was not recorded (see CaptureSession.skipped)
+            return []
         peak = wav_peak_amplitude(wav_path)
         if peak is not None and peak < SILENCE_PEAK:
             self.status_cb(f"({label}: audio en silencio, se omite)")
@@ -164,9 +193,12 @@ class RecordingSession:
     def stop_and_transcribe(self):
         if self._capture is None:
             raise SessionError("No recording in progress")
+        if self._paused_at is not None:
+            self._paused_total += time.time() - self._paused_at
+            self._paused_at = None
         mic_path, sys_path = self._capture.stop()
         self._capture = None
-        duration = max(0.0, time.time() - self._started) if self._started else 0.0
+        duration = max(0.0, time.time() - self._started - self._paused_total) if self._started else 0.0
 
         whisper_cli = binaries.get_whisper_cli()
         if not whisper_cli:

@@ -269,7 +269,47 @@ pidió. Revierte ese punto de ADR-011 y vuelve al espíritu de ADR-008.
 - `--whisper-zip`/`--vulkan-zip` instalan desde un zip local, para redes que
   bloquean GitHub.
 - Los tres `run*.bat` comparten `_bootstrap.bat` (Python, `.venv`,
-  dependencias, binarios), así que clonar + doble click alcanza.
+  dependencias), así que clonar + doble click alcanza.
+- Motor, `ffmpeg` y modelo los baja la app misma en el prewarm
+  (`RecordingController._first_run_setup`), no el `.bat`: como la GUI corre
+  sin consola, la ventana tiene que estar ya abierta mostrando el progreso, o
+  el primer arranque parece colgado durante ~600 MB de descargas.
 
 Costo aceptado: `small` es menos preciso en audio real de reunión (ver las
 comparaciones de ADR-012). Quien tenga hardware lo cambia con un click.
+
+## ADR-015 — Pausa: descartar frames, no cerrar streams
+
+Pausar/reanudar una grabación sin disparar la transcripción (que solo corre
+al detener). Estado nuevo `paused` en `RecordingController`, entre
+`recording` y `transcribing`.
+
+- Los streams WASAPI (mic, loopback y keep-alive) **siguen abiertos** en
+  pausa; `StreamRecorder` simplemente descarta los frames. Reanudar es
+  instantáneo y no hay que volver a resolver dispositivos ni reabrir el
+  loopback (ver ADR-007).
+- Las dos pistas se pausan juntas (`CaptureSession.set_paused`), así que
+  saltan el mismo tramo y el merge por timestamp sigue alineado. El desfase
+  posible es de un buffer (~20 ms).
+- Un solo par de WAV por grabación, sin segmentos: el resto del pipeline
+  (preprocesado, whisper, merge, historial) no cambia. Costo: los timestamps
+  son de tiempo grabado, no de reloj.
+- Atajo global `Ctrl+Shift+Espacio` (`pause_hotkey` en config, `""` lo
+  apaga). `keyboard` no suprime la tecla, así que la app enfocada también la
+  recibe: se eligió una combinación que casi ninguna app usa, y no
+  `Ctrl+Shift+P` (paleta de comandos en VS Code, ventana privada en Firefox).
+  Un valor inválido en config se ignora con un aviso en vez de impedir grabar.
+
+## ADR-016 — Grabar con una sola fuente si la otra falta
+
+Sin micrófono default, `CaptureSession.start()` lanzaba `DeviceError` y no se
+grababa nada, ni siquiera el audio del sistema — que es justo lo que importa
+en una reunión donde solo se escucha. Lo mismo si el micrófono existe pero
+Windows bloquea el acceso (política corporativa).
+
+- Cada pista se resuelve y abre por separado (`_open_recorder`). La que falla
+  queda en `CaptureSession.skipped` con el motivo y no deja un WAV vacío.
+- `stop()` devuelve `None` para la pista no grabada; `session.py` la salta.
+- El motivo llega a la UI como el mensaje de inicio de grabación, en vez del
+  genérico.
+- Sin ninguna de las dos fuentes sigue siendo un error explícito.

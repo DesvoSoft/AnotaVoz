@@ -53,12 +53,16 @@ run_gui.bat
 
 El primer arranque se prepara solo (una única vez, necesita internet):
 
-1. crea `.venv` e instala [`requirements.txt`](requirements.txt);
-2. baja el motor whisper.cpp fijado en
-   [`core/whisper/MANIFEST.json`](core/whisper/MANIFEST.json) (~8 MB) y
-   verifica cada archivo por SHA-256 ([`tools/setup_binaries.py`](tools/setup_binaries.py));
-3. baja `ffmpeg` (~115 MB) a `core/`;
-4. baja el modelo `small` (~488 MB) a `%APPDATA%/EchoNote/models/`.
+1. en una consola (~1 min): crea `.venv` e instala
+   [`requirements.txt`](requirements.txt);
+2. se abre la ventana de EchoNote y ahí mismo, con barra de progreso:
+   - baja el motor whisper.cpp fijado en
+     [`core/whisper/MANIFEST.json`](core/whisper/MANIFEST.json) (~8 MB) y
+     verifica cada archivo por SHA-256;
+   - baja `ffmpeg` (~115 MB) a `core/`;
+   - baja el modelo `small` (~488 MB) a `%APPDATA%/EchoNote/models/`.
+
+El botón de grabar se habilita cuando termina.
 
 Después de eso funciona 100% offline.
 
@@ -101,8 +105,21 @@ Doble click en uno de:
 - [`run_console.bat`](run_console.bat) — consola, logs en vivo; pregunta el
   modelo la primera vez
 
-`Ctrl+Shift+R` arranca/detiene la grabación en las tres interfaces. Al
-detener, transcribe y escribe en `recordings/<fecha>/`: `transcript.txt`
+`Ctrl+Shift+R` arranca/detiene la grabación en las tres interfaces.
+
+**Pausar / reanudar**: botón *Pausar* en la GUI (o *Pause/resume* en el menú
+de la bandeja). La pausa no transcribe nada ni cierra la grabación: solo deja
+de escribir audio en ambas pistas. Todo se transcribe una sola vez, al
+detener. Lo pausado no queda en los WAV, así que los timestamps del
+transcript cuentan tiempo grabado, no hora de reloj. Atajo global:
+`Ctrl+Shift+Espacio` (se cambia con `"pause_hotkey"` en `config.json`; `""`
+lo desactiva).
+
+Si falta una de las dos fuentes (sin micrófono conectado, micrófono
+bloqueado por política, sin salida de audio) se graba la otra y la GUI avisa
+cuál falta. Solo falla si no hay ninguna.
+
+Al detener, transcribe y escribe en `recordings/<fecha>/`: `transcript.txt`
 (turnos `YO`/`OTROS` con timestamps), `microphone.wav`, `system.wav` y el
 `.txt`/`.srt` de cada pista. Las grabaciones nunca salen de la máquina y
 `recordings/` está fuera de git.

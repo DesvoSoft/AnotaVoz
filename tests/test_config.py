@@ -13,6 +13,7 @@ def test_defaults_when_missing(tmp_path, monkeypatch):
     use_tmp(tmp_path, monkeypatch)
     s = config.get_settings()
     assert s["theme"] == "system" and s["vocabulary"] == "" and s["hotkey"] == "ctrl+shift+r"
+    assert s["pause_hotkey"] == "ctrl+shift+space"
 
 
 def test_corrupt_file_gives_defaults(tmp_path, monkeypatch):

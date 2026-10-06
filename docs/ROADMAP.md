@@ -102,6 +102,7 @@ Investigación + benchmarking sobre la misma grabación real:
 
 - [x] Selector de modelo Whisper — cubierto por el dropdown de `app/gui.py`
       y el submenú "Model" de `app/tray.py`
+- [x] Pausar/reanudar sin transcribir hasta detener (ADR-015)
 - [ ] Selector de dispositivo mic/sistema (no auto-detección frágil)
 - [ ] Selector de hotkey
 - [ ] "Iniciar con Windows"

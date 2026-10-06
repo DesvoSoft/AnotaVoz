@@ -21,15 +21,21 @@ const mock = (() => {
     name: n, label: ['Tiny', 'Base', 'Balanced', 'Medium', 'Best', 'Large v3'][i], note: '',
     size_mb: [75, 148, 488, 1500, 1620, 3100][i], installed: n === 'small' }));
   return {
-    async bootstrap() { return { state, model: 'small', models, gpu: 'NVIDIA GeForce RTX 5060 Ti', settings: { theme: 'system', vocabulary: '', hotkey: 'ctrl+shift+r', model: 'small' }, history }; },
+    async bootstrap() { return { state, model: 'small', models, gpu: 'NVIDIA GeForce RTX 5060 Ti', settings: { theme: 'system', vocabulary: '', hotkey: 'ctrl+shift+r', pause_hotkey: 'ctrl+shift+space', model: 'small' }, history }; },
     async toggle() {
       if (state === 'idle') {
         state = 'recording'; echo.emit('state', state);
         timer = setInterval(() => echo.emit('levels', { microphone: Math.random() * .3, system: Math.random() * .15 }), 50);
-      } else if (state === 'recording') {
+      } else if (state === 'recording' || state === 'paused') {
         clearInterval(timer); state = 'transcribing'; echo.emit('state', state);
         let p = 0; const t = setInterval(() => { p += 12; echo.emit('progress', Math.min(p, 100)); if (p >= 100) { clearInterval(t); state = 'idle'; echo.emit('state', state); echo.emit('history_changed'); } }, 300);
       }
+    },
+    async pause() {
+      if (state === 'recording') { clearInterval(timer); state = 'paused'; echo.emit('levels', { microphone: 0, system: 0 }); }
+      else if (state === 'paused') { state = 'recording'; timer = setInterval(() => echo.emit('levels', { microphone: Math.random() * .3, system: Math.random() * .15 }), 50); }
+      else return;
+      echo.emit('state', state);
     },
     async set_model(n) { models.forEach(m => m.installed = m.installed || m.name === n); return models; },
     async download_model(name) { let p = 0; const t = setInterval(() => { p += 20; echo.emit('model_download', { name, pct: p, done: p >= 100, error: null }); if (p >= 100) { clearInterval(t); models.find(m => m.name === name).installed = true; } }, 250); },
