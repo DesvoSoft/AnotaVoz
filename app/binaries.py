@@ -1,0 +1,144 @@
+import os
+import sys
+import time
+import zipfile
+import urllib.error
+import urllib.request
+import shutil
+import tempfile
+
+FFMPEG_URL = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+
+def _get_core_dir():
+    """`core/` beside the exe when frozen, or at the repo root when running from
+    source."""
+    if getattr(sys, 'frozen', False):
+        base = os.path.dirname(sys.executable)
+    else:
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, "core")
+
+
+def _resolve(rel_parts, env_var, path_name):
+    """Locate a bundled binary, in one order for every binary we ship.
+
+        1. an explicit override, so a test or a packager can pin one exactly;
+        2. the PyInstaller onefile payload, which is what a built exe runs;
+        3. core/ beside the exe or at the repo root — the same pinned files the
+           build will bundle;
+        4. whatever is on PATH.
+
+    core/ deliberately beats PATH. ffmpeg used to resolve the other way round
+    while whisper did not, which meant a machine with its own ffmpeg installed
+    ran a different binary from the one that ships — the exact class of
+    difference that makes "works here, not there" bugs.
+    """
+    override = os.environ.get(env_var)
+    if override and os.path.exists(override):
+        return override
+
+    meipass = getattr(sys, '_MEIPASS', None)
+    if meipass:
+        path = os.path.join(meipass, *rel_parts)
+        if os.path.exists(path):
+            return path
+
+    path = os.path.join(_get_core_dir(), *rel_parts[1:])
+    if os.path.exists(path):
+        return path
+
+    return shutil.which(path_name)
+
+
+def _get_bundled_ffmpeg():
+    """ffmpeg.exe from the payload, core/, or PATH — None if nowhere."""
+    return _resolve(("core", "ffmpeg.exe"), "ECHONOTE_FFMPEG", "ffmpeg")
+
+
+def _fetch(url, dest, progress_cb=None, retries=3, label="FFmpeg"):
+    """Download `url` to `dest` with a socket timeout and retries.
+
+    urlretrieve has no timeout, so a stalled connection used to hang the splash
+    screen forever with no way out but killing the app.
+    """
+    last_err = None
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(url, timeout=60) as r, open(dest, "wb") as f:
+                total = int(r.headers.get("Content-Length") or 0)
+                got = 0
+                while True:
+                    buf = r.read(1 << 20)
+                    if not buf:
+                        break
+                    f.write(buf)
+                    got += len(buf)
+                    if progress_cb and total:
+                        progress_cb(f"Downloading {label}... {min(got / total * 100, 100):.0f}%")
+            return
+        except (urllib.error.URLError, OSError, TimeoutError) as e:
+            last_err = e
+            if progress_cb and attempt < retries - 1:
+                progress_cb(f"Download interrupted, retrying ({attempt + 1}/{retries - 1})...")
+            time.sleep(2 * (attempt + 1))
+    raise OSError(f"Download failed after {retries} attempts: {last_err}")
+
+
+def _download_ffmpeg(dest, progress_cb=None):
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+            tmp_path = tmp.name
+
+        if progress_cb:
+            progress_cb("Downloading FFmpeg (first run only)...")
+
+        _fetch(FFMPEG_URL, tmp_path, progress_cb)
+
+        if progress_cb:
+            progress_cb("Extracting FFmpeg...")
+
+        with zipfile.ZipFile(tmp_path, 'r') as zf:
+            for name in zf.namelist():
+                if name.endswith("ffmpeg.exe") and "/bin/" in name:
+                    with zf.open(name) as src, open(dest, 'wb') as dst:
+                        shutil.copyfileobj(src, dst)
+                    break
+
+        if progress_cb:
+            progress_cb("FFmpeg ready!")
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+def get_whisper_cli():
+    """whisper-cli.exe for transcription, or None if this build has no whisper.
+
+    Never downloaded at runtime, unlike ffmpeg: the ggml DLLs have to land
+    beside the binary, so a partial fetch would be worse than no feature at
+    all. tools/setup_binaries.py installs the verified set in one go.
+    """
+    name = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
+    return _resolve(("core", "whisper", name), "ECHONOTE_WHISPER", "whisper-cli")
+
+
+def ensure_ffmpeg(progress_cb=None):
+    """Path to a usable ffmpeg, downloading it once if there is none.
+
+    The download is a last resort that a released exe should never reach: the
+    build bundles ffmpeg. It exists for running from a fresh source checkout.
+    """
+    found = _get_bundled_ffmpeg()
+    if found:
+        return found
+
+    # Elsewhere ffmpeg comes from the package manager; do not fetch a Windows
+    # build onto a machine that cannot run it.
+    if os.name != "nt":
+        return "ffmpeg"
+
+    core_dir = _get_core_dir()
+    os.makedirs(core_dir, exist_ok=True)
+    exe_path = os.path.join(core_dir, "ffmpeg.exe")
+    _download_ffmpeg(exe_path, progress_cb)
+    return exe_path

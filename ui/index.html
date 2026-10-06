@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es" data-theme="system">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EchoNote</title>
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">🎙</div><div><b>EchoNote</b><small>Transcripción local</small></div></div>
+    <nav>
+      <button class="nav active" data-view="record">Grabar</button>
+      <button class="nav" data-view="history">Historial</button>
+      <button class="nav" data-view="settings">Ajustes</button>
+    </nav>
+    <div class="chip" id="gpuChip">…</div>
+  </aside>
+  <main>
+    <section id="view-record" class="view active">
+      <div class="status"><span class="dot loading" id="dot"></span><span id="statusText">Cargando…</span><span id="timer"></span></div>
+      <div class="hero">
+        <button id="recBtn" class="rec" disabled aria-label="Grabar"><span class="ring"></span><span class="icon"></span></button>
+        <p class="hint">Ctrl+Shift+R también inicia o detiene</p>
+      </div>
+      <div class="waves">
+        <div class="wave"><label>Tú</label><canvas id="waveMic"></canvas></div>
+        <div class="wave"><label>Otros</label><canvas id="waveSys"></canvas></div>
+      </div>
+      <div class="progress" id="progress" hidden><div id="progressBar"></div></div>
+      <div id="log" class="log"></div>
+      <div id="upgradeBanner" class="banner" hidden>Modo ligero activo. Tu GPU puede con el modelo más preciso. <button id="upgradeBtn" class="btn">Cambiar a “Best” (1.6 GB)</button></div>
+    </section>
+    <section id="view-history" class="view">
+      <header class="bar"><h2>Historial</h2><input id="search" placeholder="Buscar…" type="search"></header>
+      <div class="split"><div id="historyList" class="list"></div><div id="transcript" class="transcript"><p class="empty">Elige una grabación</p></div></div>
+    </section>
+    <section id="view-settings" class="view">
+      <header class="bar"><h2>Ajustes</h2></header>
+      <div class="card"><h3>Modelo</h3><div id="modelList" class="models"></div></div>
+      <div class="card"><h3>Vocabulario</h3><p class="muted">Nombres y siglas que debe reconocer (uno por línea o separados por coma).</p><textarea id="vocab" rows="4"></textarea></div>
+      <div class="card"><h3>Tema</h3><select id="theme"><option value="system">Sistema</option><option value="dark">Oscuro</option><option value="light">Claro</option></select></div>
+    </section>
+  </main>
+</div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

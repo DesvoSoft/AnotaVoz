@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+build/
+venv/
+.venv/
+.env
+*.egg
+
+# Bundled binaries — large, pinned/fetched separately (see docs/ARCHITECTURE.md).
+# Excluding core/* rather than core/ is deliberate: git cannot re-include a file
+# inside an excluded directory, and the pinned manifest has to stay in the repo.
+core/*
+!core/whisper/
+core/whisper/*
+!core/whisper/MANIFEST.json
+
+# User recordings/transcripts — local data, not project source
+recordings/
+
+# PyInstaller build output
+dist/
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Local tooling and working notes (not part of the project)
+.claude/
+.serena/
+CLAUDE.md
+
+# Test cache, interrupted downloads
+.pytest_cache/
+*.part
