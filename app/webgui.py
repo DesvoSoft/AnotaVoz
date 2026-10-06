@@ -1,20 +1,36 @@
 """pywebview front-end. The window is created first; the controller starts
 after the page is loaded so early events are not lost. If the web view cannot
 start (no WebView2 runtime), falls back to the tray front-end."""
+import ctypes
 import json
 import os
+import sys
 import threading
 
-from app import single_instance
+from app import config, single_instance
 from app.api import Api, AsyncEmitter
 from app.controller import RecordingController
 
 UI_INDEX = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ui", "index.html")
 
 
+def _headless():
+    """True under pythonw (run_gui.bat): no console, so prints and tracebacks
+    go to a log file beside the config instead of nowhere."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return False
+    log_path = os.path.join(os.path.dirname(config.CONFIG_PATH), "echonote.log")
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    sys.stdout = sys.stderr = open(log_path, "w", encoding="utf-8", buffering=1)
+    return True
+
+
 def main():
+    headless = _headless()
     if not single_instance.acquire():
         print("EchoNote is already running.")
+        if headless:  # nothing else would tell the user why no window appeared
+            ctypes.windll.user32.MessageBoxW(None, "EchoNote ya está abierto.", "EchoNote", 0x40)
         return
     try:
         import webview

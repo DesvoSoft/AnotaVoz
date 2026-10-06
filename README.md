@@ -95,7 +95,8 @@ Si ya hay un `ffmpeg` en el `PATH` se usa ese. Los modelos son archivos
 Doble click en uno de:
 
 - [`run_gui.bat`](run_gui.bat) — ventana con botón grabar, ondas en vivo,
-  historial con búsqueda/exportar y ajustes (recomendado)
+  historial con búsqueda/exportar y ajustes (recomendado). Sin consola: los
+  errores van a `%APPDATA%/EchoNote/echonote.log`
 - [`run.bat`](run.bat) — solo bandeja del sistema
 - [`run_console.bat`](run_console.bat) — consola, logs en vivo; pregunta el
   modelo la primera vez

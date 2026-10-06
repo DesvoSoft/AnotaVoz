@@ -8,5 +8,6 @@ if errorlevel 1 (
     exit /b 1
 )
 
-".venv\Scripts\python.exe" -m app.webgui
-if errorlevel 1 pause
+rem pythonw = no console window; this one closes as soon as the app is launched.
+rem Output goes to %APPDATA%\EchoNote\echonote.log. Use run_console.bat to debug.
+start "" ".venv\Scripts\pythonw.exe" -m app.webgui
