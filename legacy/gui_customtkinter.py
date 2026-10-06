@@ -76,7 +76,7 @@ def _app_icon_image(size=128):
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
-        self.title("EchoNote")
+        self.title("AnotaVoz")
         self.geometry("880x640")
         self.minsize(680, 480)
         self.configure(fg_color=BG)
@@ -123,7 +123,7 @@ class App(ctk.CTk):
 
         brand = ctk.CTkFrame(sidebar, fg_color="transparent")
         brand.grid(row=0, column=0, sticky="ew", padx=16, pady=(18, 4))
-        ctk.CTkLabel(brand, text="🎙 EchoNote", font=ctk.CTkFont(size=18, weight="bold"),
+        ctk.CTkLabel(brand, text="🎙 AnotaVoz", font=ctk.CTkFont(size=18, weight="bold"),
                      text_color=TEXT).pack(anchor="w")
         ctk.CTkLabel(brand, text="Transcripción local, offline", font=ctk.CTkFont(size=11),
                      text_color=TEXT_DIM).pack(anchor="w")
@@ -363,7 +363,7 @@ class App(ctk.CTk):
 
 def main():
     if not single_instance.acquire():
-        print("EchoNote is already running.")
+        print("AnotaVoz is already running.")
         return
     App().mainloop()
 

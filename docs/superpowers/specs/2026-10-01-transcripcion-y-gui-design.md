@@ -1,4 +1,4 @@
-# EchoNote: mejora de transcripción + GUI web moderna
+# AnotaVoz: mejora de transcripción + GUI web moderna
 
 Fecha: 2026-10-01 · Estado: borrador para revisión
 
@@ -11,7 +11,7 @@ Supuestos: uso en español, reuniones/llamadas, 100 % local/offline, Windows, GP
 
 ## Hallazgos que motivan el cambio
 
-- `%APPDATA%/EchoNote/config.json` tiene `"model": "small"`; la descarga de `large-v3-turbo` quedó en `.part`. ADR-011 asumió el modelo grande, pero no se está usando.
+- `%APPDATA%/AnotaVoz/config.json` tiene `"model": "small"`; la descarga de `large-v3-turbo` quedó en `.part`. ADR-011 asumió el modelo grande, pero no se está usando.
 - El audio llega a whisper sin preprocesar (sin normalización, ruido ni anti-eco) y sin vocabulario de contexto ni ajuste de beam/temperatura.
 - El micrófono capta el audio de los parlantes, que aparece duplicado en ambas pistas.
 - VAD (Silero) descarta 99 % del habla real con el `whisper-cli` actual (ADR-011); el binario es antiguo.

@@ -1,4 +1,4 @@
-# EchoNote: transcripción + GUI web, plan de implementación
+# AnotaVoz: transcripción + GUI web, plan de implementación
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -450,12 +450,12 @@ def test_set_settings_merges_and_ignores_unknown(tmp_path, monkeypatch):
 - [ ] **Step 2:** FAIL.
 - [ ] **Step 3: Implementar** (reemplazar contenido de `app/config.py`):
 ```python
-"""Persisted settings in %APPDATA%/EchoNote/config.json. Tolerant of a
+"""Persisted settings in %APPDATA%/AnotaVoz/config.json. Tolerant of a
 missing, empty or corrupt file: anything unreadable falls back to DEFAULTS."""
 import json
 import os
 
-CONFIG_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "EchoNote", "config.json")
+CONFIG_PATH = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "AnotaVoz", "config.json")
 
 DEFAULTS = {
     "model": None,
@@ -1179,7 +1179,7 @@ UI_INDEX = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 
 def main():
     if not single_instance.acquire():
-        print("EchoNote is already running.")
+        print("AnotaVoz is already running.")
         return
     holder = {}
 
@@ -1193,7 +1193,7 @@ def main():
             pass  # window closing
 
     api = Api(controller_factory=lambda **kw: RecordingController(**kw), emit=emit)
-    window = webview.create_window("EchoNote", UI_INDEX, js_api=api, width=1120, height=740,
+    window = webview.create_window("AnotaVoz", UI_INDEX, js_api=api, width=1120, height=740,
                                    min_size=(760, 540), background_color="#0b0d12")
     holder["window"] = window
     window.events.loaded += lambda: api._start()
@@ -1305,7 +1305,7 @@ export class Waveform {
 <html lang="es" data-theme="system">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>EchoNote</title>
+<title>AnotaVoz</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/app.css">
@@ -1313,7 +1313,7 @@ export class Waveform {
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="brand"><div class="logo">🎙</div><div><b>EchoNote</b><small>Transcripción local</small></div></div>
+    <div class="brand"><div class="logo">🎙</div><div><b>AnotaVoz</b><small>Transcripción local</small></div></div>
     <nav>
       <button class="nav active" data-view="record">Grabar</button>
       <button class="nav" data-view="history">Historial</button>

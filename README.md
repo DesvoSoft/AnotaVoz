@@ -1,4 +1,7 @@
-# EchoNote
+# AnotaVoz
+
+> Antes llamado **EchoNote**. Si venís de esa versión, tus ajustes y modelos
+> se migran solos al primer arranque.
 
 Grabadora y transcriptor universal para Windows. Captura micrófono + audio del
 sistema (WASAPI loopback) en segundo plano, sin integrarse con ninguna app
@@ -8,7 +11,7 @@ localmente y offline.
 ## Por qué
 
 Reuniones y llamadas pasan por decenas de apps distintas. En vez de construir
-un plugin por cada una, EchoNote captura a nivel de sistema operativo:
+un plugin por cada una, AnotaVoz captura a nivel de sistema operativo:
 
 ```text
 Teams / Discord / Zoom / YouTube / Juegos
@@ -46,8 +49,8 @@ Requisitos: Windows 10/11 x64, [Python 3.10+](https://python.org) y
 [Git](https://git-scm.com) (o bajar el ZIP del repo). No hace falta admin.
 
 ```bat
-git clone https://github.com/DesvoSoft/EchoNote.git
-cd EchoNote
+git clone https://github.com/DesvoSoft/AnotaVoz.git
+cd AnotaVoz
 run_gui.bat
 ```
 
@@ -55,12 +58,12 @@ El primer arranque se prepara solo (una única vez, necesita internet):
 
 1. en una consola (~1 min): crea `.venv` e instala
    [`requirements.txt`](requirements.txt);
-2. se abre la ventana de EchoNote y ahí mismo, con barra de progreso:
+2. se abre la ventana de AnotaVoz y ahí mismo, con barra de progreso:
    - baja el motor whisper.cpp fijado en
      [`core/whisper/MANIFEST.json`](core/whisper/MANIFEST.json) (~8 MB) y
      verifica cada archivo por SHA-256;
    - baja `ffmpeg` (~115 MB) a `core/`;
-   - baja el modelo `small` (~488 MB) a `%APPDATA%/EchoNote/models/`.
+   - baja el modelo `small` (~488 MB) a `%APPDATA%/AnotaVoz/models/`.
 
 El botón de grabar se habilita cuando termina.
 
@@ -92,7 +95,7 @@ y pasalo por USB:
 ```
 
 Si ya hay un `ffmpeg` en el `PATH` se usa ese. Los modelos son archivos
-`ggml-*.bin` sueltos: se pueden copiar a mano a `%APPDATA%/EchoNote/models/`.
+`ggml-*.bin` sueltos: se pueden copiar a mano a `%APPDATA%/AnotaVoz/models/`.
 
 ## Uso
 
@@ -100,7 +103,7 @@ Doble click en uno de:
 
 - [`run_gui.bat`](run_gui.bat) — ventana con botón grabar, ondas en vivo,
   historial con búsqueda/exportar y ajustes (recomendado). Sin consola: los
-  errores van a `%APPDATA%/EchoNote/echonote.log`
+  errores van a `%APPDATA%/AnotaVoz/anotavoz.log`
 - [`run.bat`](run.bat) — solo bandeja del sistema
 - [`run_console.bat`](run_console.bat) — consola, logs en vivo; pregunta el
   modelo la primera vez
@@ -124,14 +127,14 @@ Al detener, transcribe y escribe en `recordings/<fecha>/`: `transcript.txt`
 `.txt`/`.srt` de cada pista. Las grabaciones nunca salen de la máquina y
 `recordings/` está fuera de git.
 
-Ajustes en `%APPDATA%/EchoNote/config.json` (modelo, vocabulario, tema,
+Ajustes en `%APPDATA%/AnotaVoz/config.json` (modelo, vocabulario, tema,
 hotkey). Solo corre una instancia a la vez. El idioma de transcripción está
 fijo en español (`LANG` en [`app/session.py`](app/session.py)).
 
 ## Estructura
 
 ```text
-EchoNote/
+AnotaVoz/
 ├── app/        # captura, transcripción, controlador, front-ends
 ├── ui/         # GUI web (HTML/CSS/JS sin build) que abre pywebview
 ├── core/       # binarios (ffmpeg, whisper.cpp) — fuera de git, solo el MANIFEST

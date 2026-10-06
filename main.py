@@ -5,7 +5,7 @@ import sys
 
 import keyboard
 
-from app import single_instance
+from app import config, single_instance
 from app.controller import FALLBACK_MODEL, RecordingController
 
 
@@ -29,11 +29,12 @@ def choose_model_console(models):
 
 
 def main():
+    config.migrate_legacy_dir()
     if not single_instance.acquire():
-        print("EchoNote is already running (check your system tray / other console).")
+        print("AnotaVoz is already running (check your system tray / other console).")
         sys.exit(1)
 
-    print("EchoNote starting...", flush=True)
+    print("AnotaVoz starting...", flush=True)
     controller = RecordingController(on_log=print, choose_model=choose_model_console)
     controller.start()
     try:

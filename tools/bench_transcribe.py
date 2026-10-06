@@ -36,7 +36,7 @@ def main():
     vocab = config.get_settings()["vocabulary"] or None
     ref = open(a.ref, encoding="utf-8").read() if a.ref else None
 
-    tmp = tempfile.mkdtemp(prefix="echonote_bench_")
+    tmp = tempfile.mkdtemp(prefix="anotavoz_bench_")
     clean = prepare(ffmpeg, a.audio, os.path.join(tmp, "clean.wav"), a.kind)
     configs = [
         ("raw, beam1", a.audio, {"beam_size": 1, "best_of": 1}, None),

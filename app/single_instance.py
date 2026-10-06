@@ -1,4 +1,4 @@
-"""Prevents two EchoNote processes from running at once.
+"""Prevents two AnotaVoz processes from running at once.
 
 Without this, launching run.bat twice (easy to do — a tray app shows no
 window to signal it already started) means two processes both register the
@@ -7,7 +7,7 @@ to the same .part file.
 """
 import ctypes
 
-_MUTEX_NAME = "Global\\EchoNoteSingleInstance"
+_MUTEX_NAME = "Global\\AnotaVozSingleInstance"
 _ERROR_ALREADY_EXISTS = 183
 
 _handle = None  # kept alive for the process lifetime; GC'ing it would release the mutex

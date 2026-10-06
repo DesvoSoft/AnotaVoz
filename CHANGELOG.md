@@ -1,8 +1,21 @@
 # Changelog
 
+## v0.2.0 — 2026-10-06
+
+**El proyecto pasa a llamarse AnotaVoz** (antes EchoNote: el nombre ya lo
+usaban varias apps parecidas).
+
+- Repo: `github.com/DesvoSoft/AnotaVoz`. La URL anterior redirige.
+- La carpeta de datos pasa de `%APPDATA%/EchoNote` a `%APPDATA%/AnotaVoz`. Se
+  mueve sola en el primer arranque: ajustes y modelos ya descargados se
+  conservan.
+- Variables de entorno: `ANOTAVOZ_FFMPEG` / `ANOTAVOZ_WHISPER` (antes
+  `ECHONOTE_*`). Log: `anotavoz.log`.
+- Sin cambios de funcionalidad respecto de v0.1.0.
+
 ## v0.1.0 — 2026-10-06
 
-Primera versión publicada. Grabadora y transcriptor local para Windows:
+Primera versión publicada, con el nombre EchoNote. Grabadora y transcriptor local para Windows:
 micrófono + audio del sistema en pistas separadas, transcripción offline con
 whisper.cpp.
 
@@ -23,7 +36,7 @@ whisper.cpp.
 - **Primer arranque visible**: la ventana se abre enseguida y muestra con barra
   de progreso la descarga del motor, `ffmpeg` y el modelo.
 - **Ventana sin consola**: `run_gui.bat` arranca con `pythonw`; los errores van
-  a `%APPDATA%/EchoNote/echonote.log`.
+  a `%APPDATA%/AnotaVoz/anotavoz.log`.
 - **Instalación en otra PC**: clonar y doble click. Los binarios se bajan
   fijados por SHA-256 (`core/whisper/MANIFEST.json`), con instalación offline
   desde zip para redes restringidas.

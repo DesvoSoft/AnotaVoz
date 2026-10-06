@@ -86,7 +86,7 @@ tray app, que no muestra ventana propia) hace que dos procesos escriban al
 mismo `.part` a la vez.
 
 Decisión:
-- `app/config.py` persiste el modelo elegido en `%APPDATA%/EchoNote/config.json`.
+- `app/config.py` persiste el modelo elegido en `%APPDATA%/AnotaVoz/config.json`.
 - Sin elección previa, el default es `small` (~488MB, "good, faster" según
   `MODEL_LABELS`), no `large-v3-turbo`.
 - `main.py` pregunta una vez por consola (`choose_model_console`) si no hay
@@ -252,7 +252,7 @@ faltan, `webgui` cae a la bandeja.
 
 ## ADR-014 — Modo ligero por default
 
-EchoNote tiene que poder clonarse y usarse en otra PC (en particular una
+AnotaVoz tiene que poder clonarse y usarse en otra PC (en particular una
 laptop de trabajo sin GPU dedicada). ADR-011 había subido el default a
 `large-v3-turbo` porque la máquina de desarrollo tiene GPU; en una máquina
 sin ella eso es una descarga de 1.6 GB y una transcripción lenta que nadie

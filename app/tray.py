@@ -7,7 +7,7 @@ import sys
 import pystray
 from PIL import Image, ImageDraw
 
-from app import single_instance
+from app import config, single_instance
 from app.controller import IDLE, LOADING, PAUSED, RECORDING, TRANSCRIBING, RecordingController
 from app.transcriber import MODELS
 
@@ -20,11 +20,11 @@ STATE_COLORS = {
 }
 
 STATE_LABELS = {
-    LOADING: "EchoNote — loading model...",
-    IDLE: "EchoNote — ready",
-    RECORDING: "EchoNote — recording",
-    PAUSED: "EchoNote — paused",
-    TRANSCRIBING: "EchoNote — transcribing...",
+    LOADING: "AnotaVoz — loading model...",
+    IDLE: "AnotaVoz — ready",
+    RECORDING: "AnotaVoz — recording",
+    PAUSED: "AnotaVoz — paused",
+    TRANSCRIBING: "AnotaVoz — transcribing...",
 }
 
 
@@ -42,7 +42,7 @@ class TrayApp:
             hotkey=hotkey, on_state=self._on_state, on_log=self._on_log,
         )
         self._icon = pystray.Icon(
-            "EchoNote",
+            "AnotaVoz",
             icon=_icon_image(STATE_COLORS[LOADING]),
             title=STATE_LABELS[LOADING],
             menu=pystray.Menu(
@@ -78,7 +78,7 @@ class TrayApp:
         self._icon.title = STATE_LABELS[state]
         if state == IDLE and self._was_transcribing:
             try:
-                self._icon.notify("Transcript ready", "EchoNote")
+                self._icon.notify("Transcript ready", "AnotaVoz")
             except NotImplementedError:
                 pass  # not every platform backend supports notify()
         self._was_transcribing = state == TRANSCRIBING
@@ -105,8 +105,9 @@ class TrayApp:
 
 
 def main():
+    config.migrate_legacy_dir()
     if not single_instance.acquire():
-        print("EchoNote is already running (check your system tray).")
+        print("AnotaVoz is already running (check your system tray).")
         sys.exit(1)
     TrayApp().run()
 

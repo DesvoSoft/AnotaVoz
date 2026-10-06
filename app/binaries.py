@@ -52,7 +52,7 @@ def _resolve(rel_parts, env_var, path_name):
 
 def _get_bundled_ffmpeg():
     """ffmpeg.exe from the payload, core/, or PATH — None if nowhere."""
-    return _resolve(("core", "ffmpeg.exe"), "ECHONOTE_FFMPEG", "ffmpeg")
+    return _resolve(("core", "ffmpeg.exe"), "ANOTAVOZ_FFMPEG", "ffmpeg")
 
 
 def _fetch(url, dest, progress_cb=None, retries=3, label="FFmpeg"):
@@ -119,7 +119,7 @@ def get_whisper_cli():
     all. tools/setup_binaries.py installs the verified set in one go.
     """
     name = "whisper-cli.exe" if os.name == "nt" else "whisper-cli"
-    return _resolve(("core", "whisper", name), "ECHONOTE_WHISPER", "whisper-cli")
+    return _resolve(("core", "whisper", name), "ANOTAVOZ_WHISPER", "whisper-cli")
 
 
 def ensure_ffmpeg(progress_cb=None):

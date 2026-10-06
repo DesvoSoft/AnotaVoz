@@ -1,6 +1,6 @@
 """Local speech-to-text via whisper.cpp.
 
-Runs fully offline once a model is cached in %APPDATA%/EchoNote/models/.
+Runs fully offline once a model is cached in %APPDATA%/AnotaVoz/models/.
 Long audio is split into chunks — whisper falls into a repeat-the-same-line
 hallucination loop on long continuous input, and restarting the decoder per
 chunk avoids it. Chunks are sliced out of the 16 kHz mono WAV so each
@@ -189,7 +189,7 @@ def default_threads():
 
 def wav_duration(path):
     """Duration in seconds, straight from the WAV header — no ffprobe needed
-    (EchoNote bundles ffmpeg.exe only)."""
+    (AnotaVoz bundles ffmpeg.exe only)."""
     try:
         with wave.open(path, "rb") as w:
             rate = w.getframerate()
@@ -455,7 +455,7 @@ class Transcriber:
         for attempt in range(4):
             self._check_cancel()
             try:
-                req = urllib.request.Request(url, headers={"User-Agent": "EchoNote"})
+                req = urllib.request.Request(url, headers={"User-Agent": "AnotaVoz"})
                 if got:
                     req.add_header("Range", f"bytes={got}-")
                 with urllib.request.urlopen(req, timeout=60) as r:
@@ -566,7 +566,7 @@ class Transcriber:
     def _run_chunk(self, wav, model_path, lang, threads, prompt, on_chunk_pct,
                    use_gpu=False, gpu_index=0, no_speech_thold=None, vad_model_path=None,
                    decode=None):
-        prefix = os.path.join(tempfile.gettempdir(), f"echonote_w_{os.urandom(6).hex()}")
+        prefix = os.path.join(tempfile.gettempdir(), f"anotavoz_w_{os.urandom(6).hex()}")
         srt_path = prefix + ".srt"
         args = build_whisper_args(self.whisper_cli, model_path, wav, prefix, lang, threads,
                                   prompt, use_gpu, gpu_index, no_speech_thold, vad_model_path,
@@ -614,7 +614,7 @@ class Transcriber:
         log = status_cb or (lambda _m: None)
         report = progress_cb or (lambda _p: None)
 
-        work_dir = tempfile.mkdtemp(prefix="echonote_tr_")
+        work_dir = tempfile.mkdtemp(prefix="anotavoz_tr_")
         wav = os.path.join(work_dir, "audio.wav")
         try:
             log("Extracting audio...")

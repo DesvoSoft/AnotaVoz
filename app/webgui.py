@@ -19,18 +19,19 @@ def _headless():
     go to a log file beside the config instead of nowhere."""
     if sys.stdout is not None and sys.stderr is not None:
         return False
-    log_path = os.path.join(os.path.dirname(config.CONFIG_PATH), "echonote.log")
-    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    log_path = os.path.join(config.DATA_DIR, "anotavoz.log")
+    os.makedirs(config.DATA_DIR, exist_ok=True)
     sys.stdout = sys.stderr = open(log_path, "w", encoding="utf-8", buffering=1)
     return True
 
 
 def main():
+    config.migrate_legacy_dir()
     headless = _headless()
     if not single_instance.acquire():
-        print("EchoNote is already running.")
+        print("AnotaVoz is already running.")
         if headless:  # nothing else would tell the user why no window appeared
-            ctypes.windll.user32.MessageBoxW(None, "EchoNote ya está abierto.", "EchoNote", 0x40)
+            ctypes.windll.user32.MessageBoxW(None, "AnotaVoz ya está abierto.", "AnotaVoz", 0x40)
         return
     try:
         import webview
@@ -52,7 +53,7 @@ def main():
             pass  # window closing
 
     api = Api(controller_factory=lambda **kw: RecordingController(**kw), emit=AsyncEmitter(raw_emit))
-    window = webview.create_window("EchoNote", UI_INDEX, js_api=api, width=1120, height=740,
+    window = webview.create_window("AnotaVoz", UI_INDEX, js_api=api, width=1120, height=740,
                                    min_size=(760, 540), background_color="#0b0d12")
     holder["window"] = window
     window.events.loaded += lambda: api._start()

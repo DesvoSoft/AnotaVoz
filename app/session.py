@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 
 from app import binaries
+from app.config import DATA_DIR
 from app.audio_prep import prepare
 from app.capture import CaptureSession
 from app.postproc import collapse_repeats, collapse_word_loops, drop_echo
@@ -27,7 +28,7 @@ from app.transcriber import (
 # whose language was never in question. See ADR-011.
 LANG = "es"
 
-MODEL_DIR = os.path.join(os.environ.get("APPDATA", os.path.expanduser("~")), "EchoNote", "models")
+MODEL_DIR = os.path.join(DATA_DIR, "models")
 RECORDINGS_DIR = "recordings"
 
 # Below this peak (out of 32767), a track is treated as true digital silence

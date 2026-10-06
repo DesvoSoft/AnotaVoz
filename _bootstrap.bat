@@ -13,7 +13,7 @@ if errorlevel 1 (
 )
 
 if not exist ".venv\.deps-ok" (
-    echo Preparing EchoNote for the first time - about a minute, only once.
+    echo Preparing AnotaVoz for the first time - about a minute, only once.
     echo The app opens by itself when this finishes.
     if not exist ".venv\Scripts\python.exe" %PY% -m venv .venv
     if errorlevel 1 exit /b 1
